@@ -2,20 +2,31 @@ import TheCanvas from "../theCanvas";
 import PointLinked, { LinePoint } from "../theCanvas/pointLinked";
 import { getSafeNumber } from "../utils";
 
+
+
+/** 折线图配置 */
+export interface LineChartOptions extends TheCanvasOptions {
+    data?: pointsData,
+    style?: colorStyle,
+    axisOptions?: axisOptions,
+    mergeSpace?: number,
+    disabledMergeSpace?: boolean,
+}
+// todo 使用 PlaneAxis 实现坐标轴
 /** 线行图表 */
 export default class LineChart extends TheCanvas {
     style: colorStyle
     axisOptions: axisOptions
     points: PointLinked
     currentAnimation?: number = null;
-    fuseSpace: number = 10
+    mergeSpace: number = 10
 
     constructor(options: LineChartOptions) {
-        const { data, style = {}, axisOptions, fuseSpace } = options;
+        const { data, style = {}, axisOptions, mergeSpace, disabledMergeSpace } = options;
         super(options)
         this.style = style;
         this.axisOptions = axisOptions;
-        this.fuseSpace = fuseSpace ?? this.fuseSpace;
+        this.mergeSpace = disabledMergeSpace ? Infinity : mergeSpace ?? this.mergeSpace;
         if (data && axisOptions) {
             this.initPoints(data)
             this.drawChart(this.ctx, this.points);
@@ -57,7 +68,9 @@ export default class LineChart extends TheCanvas {
         }
         if (needAutoYMax) {
             // 顶部预留一定的空间
-            sourceData.y = { max: yMax + yMax * 0.3 }
+            // sourceData.y = { max: yMax + yMax * 0.3 }
+            sourceData.y = { max: yMax }
+
         }
         this.axisOptions = Object.assign(this.axisOptions || { x: null, y: null }, sourceData)
     }
@@ -93,7 +106,7 @@ export default class LineChart extends TheCanvas {
      * @returns 
      */
     transformData(data: pointsData) {
-        const { paddingInline = 0 } = this.canvasStyle;
+        const { paddingInline, paddingBlock, paddingLeft, paddingTop } = this.canvasStyle;
         const _data = data.slice();
         const w = this.width;
         const h = this.height;
@@ -110,8 +123,8 @@ export default class LineChart extends TheCanvas {
             const { x, y } = _item;
             return {
                 ..._item,
-                x: x * fx + paddingInline,
-                y: h - y * fy,
+                x: x * fx + (paddingLeft || paddingInline),
+                y: h - y * fy + (paddingTop || paddingBlock),
             }
         })
 
@@ -123,7 +136,7 @@ export default class LineChart extends TheCanvas {
         // this.drawLinePoint(ctx, curPoint)
 
         // 当还有下下个节点时，如果两点之间有一位置间距最小合并间距，则将他们合并
-        while (nextPoint.next && (Math.abs(x - nextPoint.x) <= this.fuseSpace || Math.abs(y - nextPoint.y) <= this.fuseSpace)) {
+        while (this.mergeSpace !== Infinity && nextPoint.next && (Math.abs(x - nextPoint.x) <= this.mergeSpace || Math.abs(y - nextPoint.y) <= this.mergeSpace)) {
             nextPoint = nextPoint.next
         }
         if (nextPoint) {
@@ -155,6 +168,17 @@ export default class LineChart extends TheCanvas {
         }
     }
 
+    // todo in axis
+    get originX() {
+        const { paddingInline, paddingLeft } = this.canvasStyle;
+        return (this.axisOptions?.x?.min || 0) + (paddingLeft || paddingInline)
+    }
+
+    get originY() {
+        const { paddingBlock, paddingTop } = this.canvasStyle;
+        return this.height - (this.axisOptions?.y?.min || 0) + (paddingTop || paddingBlock)
+    }
+
     /**
      * 画出当前图表
      * @param  ctx 
@@ -164,10 +188,11 @@ export default class LineChart extends TheCanvas {
         if (points) {
             const { line = '#00000000', fill = 'rgb(255,255,255,0.5)' } = style
             const { end, head } = this.points;
+            const { } = this.canvasStyle;
             ctx.beginPath()
             this.drawMainPointsLine(ctx, points);
-            ctx.lineTo(end.x, this.height);
-            ctx.lineTo(0, this.height);
+            ctx.lineTo(end.x, this.originY);
+            ctx.lineTo(this.originX, this.originY);
             ctx.lineTo(head.x, head.y);
             ctx.strokeStyle = line;
             ctx.fillStyle = fill;
@@ -202,6 +227,9 @@ export default class LineChart extends TheCanvas {
         return run;
     }
 
+    /**
+     * 动画过渡 修改数据
+     * */
     animation(data: pointsData, todo: (chart: LineChart) => void, options: normalAnimationOptions = { duration: 3000, easeType: "easeInQuart" }) {
         const { duration, easeType } = options;
         const run = this.animationChange(data, duration, easeType)

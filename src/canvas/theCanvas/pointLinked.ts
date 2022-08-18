@@ -40,7 +40,7 @@ export class LinePoint implements LinePointMethods {
             // debugger
             const [c1x, c1y, c2x, c2y] = getControlPoints(px, py, this.x, this.y, nx, ny);
             this.controlPoints = {
-                // ? 限制超出
+                // 限制超出 导致反向
                 previous: c1x < px ? [] : [c1x, c1y],
                 next: c2x > nx ? [] : [c2x, c2y],
             }
@@ -161,10 +161,11 @@ export default class PointLinked {
     }
 
     scalePoints(fx: number, fy: number, point = this.head) {
+        if (!point) return;
         const { x, y, previous, next } = point;
         point.updatePosition(x * fx, y * fy);
         if (previous && previous.type === 'curve') previous.updateControlPoints();
-        if (next) return this.scalePoints(fx, fy, next);
+        return this.scalePoints(fx, fy, next);
     }
 
     animationAddPoint(point: pointData) {
@@ -193,12 +194,12 @@ export default class PointLinked {
             }
             const { x, y } = node;
             pre.set(node, node.animationChange({ change: { x: target_x - x, y: target_y - y }, type: easeType }))
+            
             node = node.next;
 
             return pre;
         }, new Map)
         if (node) {
-            // todo 删除
             const end = node.previous;
             end.next = null;
             end.updateControlPoints();
@@ -217,6 +218,9 @@ export default class PointLinked {
                 const previousNode = node.previous;
                 if (previousNode && previousNode.type === 'curve') {
                     previousNode.updateControlPoints();
+                }
+                if(progress === 1){
+                    this.calcMax(node);
                 }
             })
             return nowTime >= endTime ? true : false;

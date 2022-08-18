@@ -1,6 +1,11 @@
 import { asPercentNumber, getSafeNumber } from "../utils";
-import LineChart from "./lineChart";
+import LineChart, { LineChartOptions } from "./lineChart";
 
+
+/** 进度折现图 */
+export interface ProgressLineChartOptions extends LineChartOptions {
+    style: colorStyle & { process: string }
+}
 
 export default class ProgressLineChart extends LineChart {
     style: colorStyle & { process: string };

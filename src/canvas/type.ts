@@ -59,13 +59,23 @@ interface pointOptions {
 
 /**  */
 interface TheCanvasOptions {
-
+    dpi?: number,
+    autoInitSize?: boolean,
     canvas?: HTMLCanvasElement,
     canvasContainer?: HTMLElement,
-    canvasStyle: {
+    canvasStyle?: {
+        // todo 通过ts判断传入canvas动态判断可选或必选？？
+        /** 自动生成canvas时才会使用 */
         width?: number,
+        /** 自动生成canvas时才会使用 */
         height?: number,
-        padding?: number,
+
+        paddingLeft?: number,
+        paddingRight?: number,
+        paddingBottom?: number,
+        paddingTop?: number,
+
+        paddingBlock?: number,
         paddingInline?: number,
     }
 }
@@ -81,23 +91,12 @@ interface colorStyle {
 interface axisOptions {
     x: {
         max: number,
+        min?: number,
     },
     y: {
         max: number,
+        min?: number,
     }
-}
-
-/** 折线图配置 */
-interface LineChartOptions extends TheCanvasOptions {
-    data?: pointsData,
-    style?: colorStyle,
-    axisOptions?: axisOptions,
-    fuseSpace?: number,
-}
-
-/** 进度折现图 */
-interface ProgressLineChartOptions extends LineChartOptions {
-    style: colorStyle & { process: string }
 }
 
 interface pointAnimationOptions {
